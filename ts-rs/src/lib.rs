@@ -297,6 +297,14 @@ pub trait TS {
         export::export_type::<Self>()
     }
 
+    #[cfg(feature = "dexample")]
+    fn export_default() -> ()
+    where
+        Self: Default + serde::Serialize,
+    {
+        export::export_default::<Self>();
+    }
+
     /// Manually export this type to a file with a file with the specified path. This
     /// function will ignore the `#[ts(export_to = "..)]` attribute.
     fn export_to(path: impl AsRef<Path>) -> Result<(), ExportError>

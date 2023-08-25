@@ -32,6 +32,37 @@ pub(crate) fn export_type<T: TS + ?Sized + 'static>() -> Result<(), ExportError>
     export_type_to::<T, _>(&path)
 }
 
+#[cfg(feature = "dexample")]
+pub(crate) fn export_default<T: TS + Default + serde::Serialize + ?Sized>() -> () {
+    let default = T::default();
+    let default_json = serde_json::to_string(&default);
+    if let Ok(default) = default_json {
+        let path: PathBuf = output_path::<T>().unwrap();
+        let mut buffer = std::fs::read_to_string::<_>(&path).unwrap();
+        let type_name = std::any::type_name::<T>().split("::").last().unwrap();
+        buffer.push_str(&format!(
+            "\nlet default{} : {} = {default};",
+            type_name, type_name
+        ));
+
+        // format output
+        #[cfg(feature = "format")]
+        {
+            use dprint_plugin_typescript::{configuration::ConfigurationBuilder, format_text};
+
+            let fmt_cfg = ConfigurationBuilder::new().deno().build();
+            if let Some(formatted) = format_text(path.as_ref(), &buffer, &fmt_cfg)
+                .map_err(|e| Formatting(e.to_string()))
+                .unwrap()
+            {
+                buffer = formatted;
+            }
+        }
+
+        std::fs::write(&path, buffer).unwrap();
+    }
+}
+
 /// Export `T` to the file specified by the `path` argument.
 pub(crate) fn export_type_to<T: TS + ?Sized + 'static, P: AsRef<Path>>(
     path: P,

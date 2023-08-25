@@ -42,6 +42,7 @@ impl DerivedTS {
             #[test]
             fn #test_fn() {
                 #ty::export().expect("could not export type");
+                #ty::export_default();
             }
         })
     }
