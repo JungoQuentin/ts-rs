@@ -27,6 +27,12 @@ struct DerivedTS {
     export_to: Option<String>,
 }
 
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Conf {
+    bindings_path: String,
+}
+
 impl DerivedTS {
     fn generate_export_test(&self, rust_ty: &Ident, generics: &Generics) -> Option<TokenStream> {
         let test_fn = format_ident!("export_bindings_{}", &self.name.to_lowercase());
@@ -47,13 +53,27 @@ impl DerivedTS {
     }
 
     fn into_impl(self, rust_ty: Ident, generics: Generics) -> TokenStream {
+        // QJungo adds =====
+        let conf = std::fs::read_to_string("./trpc-server-rs/examples/hello/conf.json").unwrap();
+        let conf: Conf = serde_json::from_str(&conf).unwrap();
+        let Conf {
+            bindings_path: path,
+        } = conf;
+        let path = std::path::PathBuf::from(path);
+        if std::fs::metadata(&path).is_err() {
+            std::fs::create_dir(&path).unwrap();
+        }
+        let path = std::fs::canonicalize(&path).unwrap();
+        let path = path.to_str().unwrap();
+        //=====
+
         let export_to = match &self.export_to {
             Some(dirname) if dirname.ends_with('/') => {
                 format!("{}{}.ts", dirname, self.name)
             }
             Some(filename) => filename.clone(),
             None => {
-                format!("bindings/{}.ts", self.name)
+                format!("{path}/{}.ts", self.name) // == modified
             }
         };
 
